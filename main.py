@@ -5,13 +5,26 @@ from datetime import datetime
 from discord import app_commands
 from discord.ext import commands
 
-TOKEN = os.getenv("TOKEN")
-ADMIN_CHANNEL_ID = int(os.getenv("ADMIN_CHANNEL_ID"))
-BAN_LIST_CHANNEL_ID = int(os.getenv("BAN_LIST_CHANNEL_ID"))
-GUILD_ID = int(os.getenv("GUILD_ID"))
-TECH_SUPPORT_CATEGORY = int(os.getenv("TECH_SUPPORT_CATEGORY"))
-REPORT_CHANNEL_ID = int(os.getenv("REPORT_CHANNEL_ID"))
-SUPPORT_CHANNEL_ID = int(os.getenv("SUPPORT_CHANNEL_ID"))
+def get_env_variable(name, default=None):
+    value = os.getenv(name, default)
+    if value is None:
+        raise ValueError(f"Missing required environment variable: {name}")
+    try:
+        return int(value) if value.isdigit() else value
+    except AttributeError:
+        return value
+
+try:
+    TOKEN = get_env_variable("TOKEN")
+    ADMIN_CHANNEL_ID = get_env_variable("ADMIN_CHANNEL_ID")
+    BAN_LIST_CHANNEL_ID = get_env_variable("BAN_LIST_CHANNEL_ID")
+    GUILD_ID = get_env_variable("GUILD_ID")
+    TECH_SUPPORT_CATEGORY = get_env_variable("TECH_SUPPORT_CATEGORY")
+    REPORT_CHANNEL_ID = get_env_variable("REPORT_CHANNEL_ID")
+    SUPPORT_CHANNEL_ID = get_env_variable("SUPPORT_CHANNEL_ID")
+except ValueError as e:
+    print(f"Configuration error: {e}")
+    exit(1)
 
 BLACKLIST_FILE = "blacklist.json"
 intents = discord.Intents.default()
