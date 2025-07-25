@@ -5,26 +5,17 @@ from datetime import datetime
 from discord import app_commands
 from discord.ext import commands
 
-def get_env_variable(name, default=None):
-    value = os.getenv(name, default)
-    if value is None:
-        raise ValueError(f"Missing required environment variable: {name}")
-    try:
-        return int(value) if value.isdigit() else value
-    except AttributeError:
-        return value
+ADMIN_CHANNEL_ID=1396137647243661492
+BAN_LIST_CHANNEL_ID=1396077898292527216
+GUILD_ID=1396069780766724186
+TECH_SUPPORT_CATEGORY=1396077728888787015
+REPORT_CHANNEL_ID=1396077852025159680
+SUPPORT_CHANNEL_ID=1396078010314129450
 
-try:
-    TOKEN = get_env_variable("TOKEN")
-    ADMIN_CHANNEL_ID = get_env_variable("ADMIN_CHANNEL_ID")
-    BAN_LIST_CHANNEL_ID = get_env_variable("BAN_LIST_CHANNEL_ID")
-    GUILD_ID = get_env_variable("GUILD_ID")
-    TECH_SUPPORT_CATEGORY = get_env_variable("TECH_SUPPORT_CATEGORY")
-    REPORT_CHANNEL_ID = get_env_variable("REPORT_CHANNEL_ID")
-    SUPPORT_CHANNEL_ID = get_env_variable("SUPPORT_CHANNEL_ID")
-except ValueError as e:
-    print(f"Configuration error: {e}")
-    exit(1)
+# Only the token remains in environment variables
+TOKEN = os.getenv("TOKEN")
+if not TOKEN:
+    raise ValueError("Missing required environment variable: TOKEN")
 
 BLACKLIST_FILE = "blacklist.json"
 intents = discord.Intents.default()
@@ -74,18 +65,10 @@ class ReportModal(discord.ui.Modal, title='📢 Player Report'):
 
     async def on_submit(self, interaction: discord.Interaction):
         channel = interaction.guild.get_channel(ADMIN_CHANNEL_ID)
-        
         if not channel:
-            return await interaction.response.send_message(
-                '❌ Error: Report channel not found!',
-                ephemeral=True
-            )
+            return await interaction.response.send_message('❌ Error: Report channel not found!', ephemeral=True)
 
-        embed = discord.Embed(
-            title='🚨 New Report',
-            color=discord.Color.orange(),
-            timestamp=discord.utils.utcnow()
-        )
+        embed = discord.Embed(title='🚨 New Report', color=discord.Color.orange())
         embed.add_field(name='👤 Player', value=self.player.value, inline=False)
         embed.add_field(name='📝 Reason', value=self.reason.value, inline=False)
         embed.add_field(name='🛡️ Reporter', value=interaction.user.mention, inline=False)
@@ -93,10 +76,7 @@ class ReportModal(discord.ui.Modal, title='📢 Player Report'):
 
         view = ReportActionView()
         await channel.send(embed=embed, view=view)
-        await interaction.response.send_message(
-            f'✅ Your report on **{self.player.value}** has been submitted!',
-            ephemeral=True
-        )
+        await interaction.response.send_message(f'✅ Your report on **{self.player.value}** has been submitted!', ephemeral=True)
 
 class ReportActionView(discord.ui.View):
     def __init__(self):
@@ -120,10 +100,7 @@ class ReportActionView(discord.ui.View):
         embed.title = '✅ Report Accepted'
         self.disable_all_items()
         await interaction.response.edit_message(embed=embed, view=self)
-        await interaction.followup.send(
-            f"Report accepted by {interaction.user.mention}. Player {player_name} added to blacklist.",
-            ephemeral=True
-        )
+        await interaction.followup.send(f"Report accepted by {interaction.user.mention}. Player {player_name} added to blacklist.", ephemeral=True)
     
     @discord.ui.button(label='Reject', style=discord.ButtonStyle.red, custom_id='report_reject')
     async def reject(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -132,10 +109,7 @@ class ReportActionView(discord.ui.View):
         embed.title = '❌ Report Rejected'
         self.disable_all_items()
         await interaction.response.edit_message(embed=embed, view=self)
-        await interaction.followup.send(
-            f"Report rejected by {interaction.user.mention}",
-            ephemeral=True
-        )
+        await interaction.followup.send(f"Report rejected by {interaction.user.mention}", ephemeral=True)
 
 async def update_ban_list(guild):
     channel = guild.get_channel(BAN_LIST_CHANNEL_ID)
@@ -147,25 +121,16 @@ async def update_ban_list(guild):
     
     blacklist = load_blacklist()
     if not blacklist["banned_players"]:
-        embed = discord.Embed(
-            title='🔴 Banned Players',
-            description='The list is currently empty',
-            color=discord.Color.red()
-        )
+        embed = discord.Embed(title='🔴 Banned Players', description='The list is currently empty', color=discord.Color.red())
         return await channel.send(embed=embed)
     
-    embed = discord.Embed(
-        title='🔴 Banned Players List',
-        color=discord.Color.red()
-    )
-    
+    embed = discord.Embed(title='🔴 Banned Players List', color=discord.Color.red())
     for entry in blacklist["banned_players"]:
         embed.add_field(
             name=f"• {entry['player']} ({entry['date']})",
             value=f"**Reason:** {entry['reason']}\n**Moderator:** {entry['moderator']}",
             inline=False
         )
-    
     await channel.send(embed=embed)
 
 class SupportTicketView(discord.ui.View):
@@ -176,10 +141,7 @@ class SupportTicketView(discord.ui.View):
     async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         category = interaction.guild.get_channel(TECH_SUPPORT_CATEGORY)
         if not category:
-            return await interaction.response.send_message(
-                "❌ Ticket system not configured!",
-                ephemeral=True
-            )
+            return await interaction.response.send_message("❌ Ticket system not configured!", ephemeral=True)
         
         ticket_channel = await category.create_text_channel(
             name=f"ticket-{interaction.user.name}",
@@ -187,67 +149,51 @@ class SupportTicketView(discord.ui.View):
             reason=f"Ticket created by {interaction.user.name}"
         )
         
-        await ticket_channel.set_permissions(
-            interaction.user,
-            read_messages=True,
-            send_messages=True
-        )
+        await ticket_channel.set_permissions(interaction.user, read_messages=True, send_messages=True)
         
         embed = discord.Embed(
             title='🛠️ Support Ticket',
-            description=f"Hello {interaction.user.mention}!\n\nPlease describe your issue and our team will assist you.",
+            description=f"Hello {interaction.user.mention}!\n\nPlease describe your issue.",
             color=discord.Color.blue()
         )
-        
-        await ticket_channel.send(
-            content=f"{interaction.user.mention} ticket created!",
-            embed=embed
-        )
-        
-        await interaction.response.send_message(
-            f"✅ Ticket created: {ticket_channel.mention}",
-            ephemeral=True
-        )
+        await ticket_channel.send(content=f"{interaction.user.mention} ticket created!", embed=embed)
+        await interaction.response.send_message(f"✅ Ticket created: {ticket_channel.mention}", ephemeral=True)
 
 @bot.event
 async def on_ready():
     print(f'🔗 Bot {bot.user} is online!')
-    
     bot.add_view(ReportActionView())
     bot.add_view(SupportTicketView())
     
     try:
-        await bot.tree.sync()
-        guild = discord.Object(id=GUILD_ID)
-        await bot.tree.sync(guild=guild)
-        print('🔄 Commands synced')
+        synced = await bot.tree.sync()
+        print(f"🔄 Synced {len(synced)} commands")
     except Exception as e:
-        print(f'❌ Sync error: {e}')
+        print(f"❌ Command sync error: {e}")
     
     guild = bot.get_guild(GUILD_ID)
     if not guild:
-        return
+        return print("❌ Guild not found")
     
+    # Send report instructions
     report_channel = guild.get_channel(REPORT_CHANNEL_ID)
     if report_channel:
-        embed = discord.Embed(
+        await report_channel.purge(limit=1)
+        await report_channel.send(embed=discord.Embed(
             title='📢 Report System',
             description='Use `/report` command to report a player',
             color=discord.Color.green()
-        )
-        await report_channel.purge(limit=10)
-        await report_channel.send(embed=embed)
+        ))
     
+    # Send support ticket button
     support_channel = guild.get_channel(SUPPORT_CHANNEL_ID)
     if support_channel:
-        embed = discord.Embed(
+        await support_channel.purge(limit=1)
+        await support_channel.send(embed=discord.Embed(
             title='🛠️ Support System',
-            description='Click the button below to create a private ticket',
+            description='Click below to create a ticket',
             color=discord.Color.blue()
-        )
-        view = SupportTicketView()
-        await support_channel.purge(limit=10)
-        await support_channel.send(embed=embed, view=view)
+        ), view=SupportTicketView())
     
     await update_ban_list(guild)
 
@@ -258,25 +204,16 @@ async def report_command(interaction: discord.Interaction):
 @bot.tree.command(name="blacklist", description="View banned players")
 async def blacklist_command(interaction: discord.Interaction):
     blacklist = load_blacklist()
-    
     if not blacklist["banned_players"]:
-        return await interaction.response.send_message(
-            "The blacklist is empty",
-            ephemeral=True
-        )
+        return await interaction.response.send_message("The blacklist is empty", ephemeral=True)
     
-    embed = discord.Embed(
-        title='🔴 Banned Players',
-        color=discord.Color.red()
-    )
-    
+    embed = discord.Embed(title='🔴 Banned Players', color=discord.Color.red())
     for entry in blacklist["banned_players"]:
         embed.add_field(
             name=f"• {entry['player']} ({entry['date']})",
             value=f"**Reason:** {entry['reason']}\n**Moderator:** {entry['moderator']}",
             inline=False
         )
-    
     await interaction.response.send_message(embed=embed)
 
 bot.run(TOKEN)
